@@ -1,0 +1,3 @@
+---
+release_summary: |
+   Addes a new module `jdc.network.hosts` which maintains the content of the `/etc/hosts` file.

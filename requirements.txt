@@ -1,0 +1,3 @@
+antsibull-changelog>=0.30.0
+antsibull-docutils>=1.0.0
+antsibull-fileutils>=1.0.1
