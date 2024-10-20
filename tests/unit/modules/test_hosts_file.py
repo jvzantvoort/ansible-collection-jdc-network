@@ -5,32 +5,37 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-import os
-import tempfile
-import shutil
 import unittest
-import re
-import copy
-from io import StringIO 
-from pprint import pformat
+from io import StringIO
 
-from unittest.mock import mock_open, patch
+import os
+import sys
+THISDIR = os.path.dirname(os.path.abspath(__file__))
+TOPDIR = os.path.dirname(os.path.dirname(os.path.dirname(THISDIR)))
+LIBDIR = os.path.join(TOPDIR, "plugins", "modules")
+sys.stderr.write(f"{LIBDIR}")
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(LIBDIR)
+
+# raise Exception(f"{THISDIR}\n{LIBDIR}")
 
 import hosts_file
-HEADER = '''# Ansible managed
+
+HEADER = """# Ansible managed
 ::1             ip6-localhost ip6-loopback localhost localhost.localdomain localhost6 localhost6.localdomain6
 fe00::0         ip6-localnet ip6-mcastprefix
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 127.0.0.1       localhost localhost.localdomain localhost4 localhost4.localdomain4
-'''
+"""
+
 
 class TestHostsFile(unittest.TestCase):
 
     def test_uniq(self):
         """test uniq function"""
-        src = ['a', 'b', 'b', 'c']
-        dst = ['a', 'b', 'c']
+        src = ["a", "b", "b", "c"]
+        dst = ["a", "b", "c"]
         obj = hosts_file.HostsFile()
         ref = obj.uniq(src)
         self.assertEqual("a b c", " ".join(ref))
@@ -68,8 +73,6 @@ class TestHostsFile(unittest.TestCase):
         obj = hosts_file.HostsFile()
         data = obj.remove_elements(["192.168.1.2", "a", "b", "c"], "a", "b")
         self.assertEqual(" ".join(data), "192.168.1.2 c")
-
-
 
 
 if __name__ == "__main__":
