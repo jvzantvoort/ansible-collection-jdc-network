@@ -1,0 +1,11 @@
+ancestor: null
+releases:
+  1.0.0:
+    changes:
+      release_summary: 'Addes a new module `jdc.network.hosts` which maintains the
+        content of the `/etc/hosts` file.
+
+        '
+    fragments:
+    - feater_add_hosts.yml
+    release_date: '2024-10-20'
