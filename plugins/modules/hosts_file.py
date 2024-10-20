@@ -1,21 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 """Ansible module jdc.network.hosts_file"""
 
-from __future__ import absolute_import, division, print_function
-# pylint: disable=C0103
-__metaclass__ = type
-
-import re
-import os
-import json
-import socket
-import struct
-from datetime import datetime
-
-from ansible.module_utils.basic import AnsibleModule
-
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 ---
 module: hosts_file
 short_description: Manage the hosts file
@@ -24,21 +12,31 @@ description:
 options:
   hostsfile:
     description: Define the hosts file
+    type: str
     default: "/etc/hosts"
   debuglog:
     description: defined log file for debugging
+    type: str
   state:
     description: state choices absent or present
     default: "present"
+    type: str
+    choices:
+      - absent
+      - present
   definitions:
     description: List of dicts
+    type: list
+    elements: raw
   defaults:
     description: add the default entries
+    default: false
+    type: bool
 author:
   - John van Zantvoort (@jvzantvoort) <john@vanzantvoort.org>
-'''
+"""
 
-EXAMPLES = r'''
+EXAMPLES = r"""
 - name: add pietje
   jdc.network.hosts_file:
     hostsfile: /tmp/lala
@@ -60,16 +58,29 @@ EXAMPLES = r'''
       - ipaddress: 172.0.0.100
         hostnames:
           - lala
-'''
+"""
 
-RETURN = r'''
+RETURN = r"""
 ---
 hostsfile:
-    description: the path to O(/etc/hosts)
+    description: the path to C(/etc/hosts)
     type: str
     returned: always
     sample: '/etc/hosts'
-'''
+"""
+
+# pylint: disable=C0103
+__metaclass__ = type
+
+import re
+import os
+import json
+import socket
+import struct
+from datetime import datetime
+
+from ansible.module_utils.basic import AnsibleModule
+
 
 # from ansible.module_utils.common.text.converters import to_bytes, to_text
 
@@ -80,25 +91,26 @@ __license__ = "MIT"
 __version__ = "1.0.1"
 
 # https://stackoverflow.com/questions/53497/regular-expression-that-matches-valid-ipv6-addresses
-IPV4SEG = r'(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])'
-IPV4ADDR = r'(?:(?:' + IPV4SEG + r'\.){3,3}' + IPV4SEG + r')'
-IPV6SEG = r'(?:(?:[0-9a-fA-F]){1,4})'
+IPV4SEG = r"(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])"
+IPV4ADDR = r"(?:(?:" + IPV4SEG + r"\.){3,3}" + IPV4SEG + r")"
+IPV6SEG = r"(?:(?:[0-9a-fA-F]){1,4})"
 IPV6GROUPS = (
-    r'(?:' + IPV6SEG + r':){7,7}' + IPV6SEG,
-    r'(?:' + IPV6SEG + r':){1,7}:',
-    r'(?:' + IPV6SEG + r':){1,6}:' + IPV6SEG,
-    r'(?:' + IPV6SEG + r':){1,5}(?::' + IPV6SEG + r'){1,2}',
-    r'(?:' + IPV6SEG + r':){1,4}(?::' + IPV6SEG + r'){1,3}',
-    r'(?:' + IPV6SEG + r':){1,3}(?::' + IPV6SEG + r'){1,4}',
-    r'(?:' + IPV6SEG + r':){1,2}(?::' + IPV6SEG + r'){1,5}',
-    IPV6SEG + r':(?:(?::' + IPV6SEG + r'){1,6})',
-    r':(?:(?::' + IPV6SEG + r'){1,7}|:)',
-    r'fe80:(?::' + IPV6SEG + r'){0,4}%[0-9a-zA-Z]{1,}',
-    r'::(?:ffff(?::0{1,4}){0,1}:){0,1}[^\s:]' + IPV4ADDR,
-    r'(?:' + IPV6SEG + r':){1,4}:[^\s:]' + IPV4ADDR,
+    r"(?:" + IPV6SEG + r":){7,7}" + IPV6SEG,
+    r"(?:" + IPV6SEG + r":){1,7}:",
+    r"(?:" + IPV6SEG + r":){1,6}:" + IPV6SEG,
+    r"(?:" + IPV6SEG + r":){1,5}(?::" + IPV6SEG + r"){1,2}",
+    r"(?:" + IPV6SEG + r":){1,4}(?::" + IPV6SEG + r"){1,3}",
+    r"(?:" + IPV6SEG + r":){1,3}(?::" + IPV6SEG + r"){1,4}",
+    r"(?:" + IPV6SEG + r":){1,2}(?::" + IPV6SEG + r"){1,5}",
+    IPV6SEG + r":(?:(?::" + IPV6SEG + r"){1,6})",
+    r":(?:(?::" + IPV6SEG + r"){1,7}|:)",
+    r"fe80:(?::" + IPV6SEG + r"){0,4}%[0-9a-zA-Z]{1,}",
+    r"::(?:ffff(?::0{1,4}){0,1}:){0,1}[^\s:]" + IPV4ADDR,
+    r"(?:" + IPV6SEG + r":){1,4}:[^\s:]" + IPV4ADDR,
 )
 # IPV6ADDR = '|'.join(['(?:{})'.format(g) for g in IPV6GROUPS[::-1]])
-IPV6ADDR = '|'.join([f'(?:{g})' for g in IPV6GROUPS[::-1]])
+IPV6ADDR = "|".join([f"(?:{g})" for g in IPV6GROUPS[::-1]])
+
 
 # pylint: disable=R0902
 class HostsFile:
@@ -114,18 +126,19 @@ class HostsFile:
     :type state: str
     :type definitions: list
     """
+
     def __init__(self, **kwargs):
 
-        self.hostsfile = kwargs.get('hostsfile', '/etc/hosts')
-        self.debuglog = kwargs.get('debuglog')
-        self.state = kwargs.get('state')
-        self.definitions = kwargs.get('definitions')
+        self.hostsfile = kwargs.get("hostsfile", "/etc/hosts")
+        self.debuglog = kwargs.get("debuglog")
+        self.state = kwargs.get("state")
+        self.definitions = kwargs.get("definitions")
 
         self.pattern_ipv4 = re.compile(IPV4ADDR)
         self.pattern_ipv6 = re.compile(IPV6ADDR)
         self.ipv4 = {}
         self.ipv6 = {}
-        self.result = {'changed': False, 'hostsfile': self.hostsfile}
+        self.result = {"changed": False, "hostsfile": self.hostsfile}
 
     @staticmethod
     def uniq(names):
@@ -148,14 +161,14 @@ class HostsFile:
     @property
     def changed(self):
         """return the changed state"""
-        return self.result.get('changed')
+        return self.result.get("changed")
 
     @changed.setter
     def changed(self, state):
         """set the changed state"""
-        if self.result.get('changed') != state:
+        if self.result.get("changed") != state:
             self.log(f"changed state set to {state}")
-            self.result['changed'] = state
+            self.result["changed"] = state
         return state
 
     def log(self, msg, pretty_print=False):
@@ -170,13 +183,13 @@ class HostsFile:
         if self.debuglog is None:
             return
 
-        timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-        with open(self.debuglog, 'a', encoding="utf8") as logh:
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+        with open(self.debuglog, "a", encoding="utf8") as logh:
             if pretty_print:
-                msg = json.dumps(msg, sort_keys=True, indent=4, separators=(',', ': '))
+                msg = json.dumps(msg, sort_keys=True, indent=4, separators=(",", ": "))
 
-            for line in msg.split('\n'):
-                logh.write(f'{timestamp} {line}\n')
+            for line in msg.split("\n"):
+                logh.write(f"{timestamp} {line}\n")
 
     def remove_elements(self, srclist, *prune_list):
         """
@@ -233,8 +246,8 @@ class HostsFile:
         with open(self.hostsfile, encoding="utf8") as ifh:
             for line in ifh.readlines():
 
-                if '#' in line:
-                    line = line.split('#')[0]
+                if "#" in line:
+                    line = line.split("#")[0]
                 line = line.strip()
 
                 if line:
@@ -266,7 +279,6 @@ class HostsFile:
         if match is None:
             return False
         return True
-
 
     def add_entry(self, ipaddr, *hosts):
         """
@@ -320,7 +332,7 @@ class HostsFile:
         :param ofh: output file handle
         :type ofh: file
         """
-        ofh.write('# Ansible managed\n')
+        ofh.write("# Ansible managed\n")
 
         for ipaddr in sorted(self.ipv6):
             names = " ".join(self.ipv6.get(ipaddr, []))
@@ -354,48 +366,51 @@ class HostsFile:
         """
         self.log("start")
         self.readfile()
-        defaults = kwargs.get('defaults', False)
+        defaults = kwargs.get("defaults", False)
 
         if defaults:
             self.add_defaults()
 
         for row in self.definitions:
             hostnames = row.get("hostnames")
-            ipaddress = row.get('ipaddress')
+            ipaddress = row.get("ipaddress")
 
-            if self.state == 'present':
+            if self.state == "present":
                 self.add_entry(ipaddress, *hostnames)
             else:
                 self.remove_entry(ipaddress, *hostnames)
 
         if self.changed:
-            with open(self.hostsfile, 'w', encoding="utf8") as ofh:
+            with open(self.hostsfile, "w", encoding="utf8") as ofh:
                 self.write(ofh)
 
         return self.result
+
 
 def main():
     """main"""
     module = AnsibleModule(
         argument_spec=dict(
-            hostsfile=dict(type='str', default='/etc/hosts'),
-            debuglog=dict(type='str'),
-            state=dict(type='str', default='present', choices=['absent', 'present']),
-            definitions=dict(type='list', elements='raw'),
-            defaults=dict(type='bool', default=False),
+            hostsfile=dict(type="str", default="/etc/hosts"),
+            debuglog=dict(type="str"),
+            state=dict(type="str", default="present", choices=["absent", "present"]),
+            definitions=dict(type="list", elements="raw"),
+            defaults=dict(type="bool", default=False),
         ),
         supports_check_mode=True,
-        add_file_common_args=True,
     )
 
-    hostf = HostsFile(hostsfile=module.params['hostsfile'],
-                      debuglog=module.params['debuglog'],
-                      state=module.params['state'],
-                      definitions=module.params['definitions'])
+    hostf = HostsFile(
+        hostsfile=module.params["hostsfile"],
+        debuglog=module.params["debuglog"],
+        state=module.params["state"],
+        definitions=module.params["definitions"],
+    )
 
     result = hostf.main()
 
     module.exit_json(**result)
+
 
 if __name__ == "__main__":
     main()
